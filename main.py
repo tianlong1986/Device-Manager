@@ -20,8 +20,8 @@ import time
 
 import dm_top
 import dm_center
-WIN_WIDTH=600
-WIN_HEIGHT=540
+WIN_WIDTH=840
+WIN_HEIGHT=620
 class MainUI(gtk.Window):
         def __init__(self):
                 super(MainUI,self).__init__()
@@ -31,8 +31,8 @@ class MainUI(gtk.Window):
                 self.vbox=gtk.VBox(False, 2)
 		hb_top = dm_top.dm_topbar();
 		hb_center = dm_center.dm_main()
-		self.vbox.pack_start(hb_top, False, False,10)
-		self.vbox.pack_start(hb_center, False, False,10)
+		#self.vbox.pack_start(hb_top, False, False,10)
+		self.vbox.pack_start(hb_center, False, False,30)
                 self.add(self.vbox)
 		self.connect("destroy", gtk.main_quit)
 		self.vbox.show_all()
