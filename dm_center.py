@@ -1,43 +1,58 @@
 # -*- coding: utf-8 -*-
 import gtk, gobject
+import os
 import pango
+import time
+import thread
 from xml.etree import ElementTree
 import dm_detail
 from dm_temperature import tempBox
+import dm_common_func as comf 
 
+#hwinfo_file = "/tmp/.hwinfo.xml"
+win_bg_image="/usr/share/autotest/bg/1.jpg"
+
+hwinfo_file = "./hwinfo.xml"
 list_text_color = gtk.gdk.Color(60000, 5000, 30003, 60000)
-list_text_bk_color = gtk.gdk.Color(50000, 65000, 40003, 60000)
+#list_text_bk_color = gtk.gdk.Color(3800, 17600, 2303, 60000)#深绿色
+list_text_bk_color = gtk.gdk.Color(38000, 57600, 65303, 60000)
+win_bg_color=gtk.gdk.Color(60000, 65000, 55003, 60000)
+win_fg_color=gtk.gdk.Color(60, 55500, 33,63000)
 class dm_main(gtk.HBox):
 	def __init__(self):
 		super(dm_main, self).__init__()
-		hwlist = self.createList()
+		self.hwlist = self.createList()
 		infoview = self.createView()
 		other = tempBox()
-		self.pack_start(hwlist, False,False,5)
-		self.pack_start(infoview, False,False,0)
-		self.pack_start(other, False,False,1)
+		other.set_size_request(200,500)
+		self.pack_start(self.hwlist, False,False,5)
+		self.pack_start(infoview, False,False,10)
+		self.pack_start(other, False,False,5)
 		#self.set_size_request(100, 150)
 	
-		self.dictTag = {'ALL':'all',
+		self.dictTag = {'ALL':'tom',
 				'CPU':'cpu', 
 				'ZB':'core', 
 				'VGA':'display', 
+				'HD':'ide', 
+				'DRM':'driver', 
+				'NET':'network', 
 				'SOUND':'multimedia', 
 				'MEM':'memory'}
 	def createList(self):
 	        store = gtk.ListStore(gobject.TYPE_STRING,
                                      gobject.TYPE_STRING)
                 #for item in self.alltype:
-                store.append(("ALL","All View"))
+                store.append(("ALL","Computer View"))
                 store.append(("DRM","Driver View"))
 		store.append(("CPU", "CPU info"))
-		store.append(("ZB", "zhuban info"))
+		store.append(("ZB", "Motherboard info"))
 		store.append(("MEM", "Memory info"))
 		store.append(("HD", "HardDisk info"))
 		store.append(("VGA", "Video info"))
 		store.append(("MON", "Monitor info"))
 		store.append(("CDR", "CD-ROM info"))
-		store.append(("NET", "NET Card info"))
+		store.append(("NET", "Net Card info"))
 		store.append(("SOUND", "Sound card info"))
 		store.append(("BAT", "Battery info"))
 		store.append(("OTHER", "Other info"))
@@ -54,15 +69,17 @@ class dm_main(gtk.HBox):
 		treeView.set_headers_visible(False)
 
                 column1 = gtk.TreeViewColumn("", cell1, text=1)
-		treeView.modify_text(gtk.STATE_NORMAL,list_text_color)
+		#treeView.modify_text(gtk.STATE_NORMAL,list_text_color)
 
                 treeView.append_column(column1)
                 treeView.columns_autosize()
 		treeView.set_size_request(150, 500)
+		comf.set_bg_image(treeView,win_bg_image)
 		return treeView
 
 	def createView(self):
 		vbox = gtk.VBox()
+		#os.system("lshw -xml > /tmp/.hwinfo.xml")
 		self.detail_buffer = gtk.TextBuffer()
                 detailTextView = gtk.TextView(self.detail_buffer)
                 detailTextView.set_editable(False)
@@ -99,30 +116,12 @@ class dm_main(gtk.HBox):
 		vbox.pack_start(hbox, False,False, 2)
 		vbox.pack_start(detailTextView, False,False, 2)
 		#vbox.set_size_request(200,200)
+		self.root = self.load_xml(open(hwinfo_file).read())
 		return vbox
-	#creat right to put temperature and log
-	def createTem(self):
-		vbox = gtk.VBox()
-		logo = gtk.Image()
-		logo.set_from_file("./icon/lenovo1.jpg")
-		
-		label = gtk.Label("Temperature ....")
-		progress1 = gtk.ProgressBar()
-		progress1.set_text("dfffffffff")
-		progress1.set_pulse_step(0.1)
-		progress1.set_fraction(0.5)
-		progress1.modify_bg(gtk.STATE_NORMAL, gtk.gdk.Color(51400, 61400, 51400))
-		progress1.modify_bg(gtk.STATE_ACTIVE, gtk.gdk.Color(1400, 61400, 51400))
-		progress1.modify_bg(gtk.STATE_INSENSITIVE, gtk.gdk.Color(1400, 6140, 51400))
-		progress1.modify_bg(gtk.STATE_PRELIGHT, gtk.gdk.Color(1400, 61400, 1400))
-		progress1.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color(51400, 61400, 51400))
-		progress1.modify_base(gtk.STATE_NORMAL, gtk.gdk.Color(51400, 61400, 51400))
-		vbox.pack_start(logo, False, False, 20)
-		vbox.pack_start(label, False, False, 2)
-		vbox.pack_start(progress1, False, False, 2)
-		return vbox
-	
+
 	def view_detail_clicked(self,widget):
+		self.hwlist.set_cursor(1)
+		return
 		self.norDevices = [[],[]]
 		self.norDevices[0].append("Wireless")
 		self.norDevices[1].append("Net device")
@@ -136,14 +135,13 @@ class dm_main(gtk.HBox):
 	        print model[path][0], path
 	        print model[path][1]
 		self.selected = model[path][0]
-		#if model[path][0] == "CPU":
-		self.read_xml(open("hwinfo.xml").read())
+		self.read_xml(self.root)
 
 	def print_node(self,node):
 	    	'''打印结点基本信息'''
 	    	print "=============================================="
-	    	#print "node.attrib:%s" % node.attrib
-	    	#print "node.attrib:%s" % node.items()
+	    	print "node.attrib:%s" % node.attrib
+	    	print "node.attrib:%s" % node.items()
 	    	#print "node.attrib:" , node
 		#return
 		#if node.attrib.has_key("id") > 0 :
@@ -161,27 +159,23 @@ class dm_main(gtk.HBox):
 	    #    print "node.attrib['age']:%s" % node.attrib['age']
 	    #print "node.tag:%s" % node.tag
 	    #print "node.text:%s" % node.text
-	def read_xml(self,text):
+	def load_xml(self,text):
 	    	'''读xml文件'''
 	    # 加载XML文件（2种方法,一是加载指定字符串，二是加载指定文件）   
 	    # root = ElementTree.parse(r"D:/test.xml")
-	    	root = ElementTree.fromstring(text)
-		eitor = root.getchildren()
-    	#	for e in eitor:
-	 #       	self.print_node(e)  
+		return ElementTree.fromstring(text)
 	    # 获取element的方法
 	    # 1 通过getiterator
+	def read_xml(self,root):
 	    	lst_node = root.getiterator("node")
 		strid=self.dictTag.get(self.selected)
 		print "8888888888888888888=",strid
-	    	for node in lst_node:
-			#eitor = node.getchildren()
-    			#for e in eitor:
-	        	#	self.print_node(e)  
-				#print node.findall("capability").items()	    
-			if(node.get("id") == strid):
-	        		self.print_node(node)
-	         
+		if(strid == "driver"):
+			self.read_drivers2(root)
+		else:
+	    		for node in lst_node:
+				if(node.get("id") == strid):
+	        			self.print_node(node)
 	    # 2通过 getchildren
 	    #lst_node_child = lst_node[0].getchildren()[0]
 	    #print_node(lst_node_child)
@@ -193,4 +187,20 @@ class dm_main(gtk.HBox):
 	    #4. findall方法
 	    	#node_findall = root.findall("physid/node/product")
 	    	#self.print_node(node_findall)
-		
+	def read_drivers(self, root):
+		print 222222222222
+		lst_node = root.getiterator("setting")
+		self.detail_buffer.delete(self.detail_buffer.get_start_iter(), self.detail_buffer.get_end_iter())
+		for node in lst_node:
+			print "dddddddd node=",node,"node(id)=", node.get("id")
+			if(node.get("id") == "driver"):
+				endIter = self.detail_buffer.get_end_iter()
+				self.detail_buffer.insert(endIter, "".join("\ndriver:%s"%(node.get("value"))))
+	def read_drivers2(self, root):
+		lst_node = root.getiterator("setting")
+		self.detail_buffer.delete(self.detail_buffer.get_start_iter(), self.detail_buffer.get_end_iter())
+		for node in lst_node:
+			if(node.get("id") == "driver"):
+				endIter = self.detail_buffer.get_end_iter()
+				self.detail_buffer.insert(endIter, "".join("\ndriver:%s"%(node.get("value"))))
+

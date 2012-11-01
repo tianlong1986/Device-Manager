@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import gtk,gobject
+logo_file = "./pic/lenovo5.jpg"
+#logo_file = "./pic/girl.gif"
 class tempBox(gtk.VBox):
         def __init__(self):
                 super(tempBox,self).__init__()
                 logo = gtk.Image()
-                logo.set_from_file("./icon/lenovo5.jpg")
+                logo.set_from_file(logo_file)
 		#logo.set_size_request(80, 30)
                 label = gtk.Label("Computer view")
 		label.set_markup("<span font=\"12.5\" >Computer view</span>")
@@ -23,7 +25,7 @@ class tempBox(gtk.VBox):
 		cpuTemp = self.create_temp("CPU", 20)
 		videoTemp = self.create_temp("Video", 40)
 		hdTemp = self.create_temp("Harddisk", 60)
-		zbTemp = self.create_temp("zhuban", 80)
+		zbTemp = self.create_temp("Motherboard", 80)
                 self.pack_start(logo, False, False, 2)
                 self.pack_start(hbox, False, False, 7)
                 self.pack_start(cpuTemp, False, False, 7)
